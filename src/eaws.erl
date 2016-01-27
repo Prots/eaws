@@ -11,24 +11,15 @@
 
 -include("eaws.hrl").
 
+%%================================
+%% API
+%%================================
 start() ->
-    F = fun({App, _, _}) -> App end,
-    RunningApps = lists:map(F, application:which_applications()),
-    LoadedApps = lists:map(F, application:loaded_applications()),
-    case lists:member(?MODULE, LoadedApps) of
-        true -> true;
-        false -> ok = application:load(?MODULE)
-    end,
-    {ok, Apps} = application:get_key(?MODULE, applications),
-    [application:start(A) || A <- Apps ++ [?MODULE], not lists:member(A, RunningApps)],
-    ok.
+    start(?MODULE).
 
 stop() ->
     application:stop(?MODULE).
 
-%%================================
-%% API
-%%================================
 send_formatted(Par) ->
     {_, AccessKey} = lists:keyfind(<<"access_key">>, 1, Par),
     {_, AccessId} = lists:keyfind(<<"access_id">>, 1, Par),
@@ -52,6 +43,25 @@ send_raw(Par) ->
     MultPrtBody = eaws_util:build_multipart_body(From, To, Subj, Date, Txt, Attchs),
     eaws_http:req(?Detect_EndPoint(EndP), AuthHdrs, ?CONT_TYPE_XWWW, MultPrtBody).
 
+%% Internal
+start(AppName) ->
+    F = fun({App, _, _}) -> App end,
+    RunningApps = lists:map(F, application:which_applications()),
+    ok = load(AppName),
+    {ok, Dependencies} = application:get_key(AppName, applications),
+    [begin
+         ok = start(A)
+     end || A <- Dependencies, not lists:member(A, RunningApps)],
+    ok = application:start(AppName).
 
+load(AppName) ->
+    F = fun({App, _, _}) -> App end,
+    LoadedApps = lists:map(F, application:loaded_applications()),
+    case lists:member(AppName, LoadedApps) of
+        true ->
+            ok;
+        false ->
+            ok = application:load(AppName)
+    end.
 
 

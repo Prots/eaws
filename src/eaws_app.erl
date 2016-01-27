@@ -10,8 +10,11 @@
 -export([start_link/0]).
 -export([init/1]).
 
-start(_Type, _Args) -> eaws_app:start_link().
-stop(_Client) -> ok.
+start(_Type, _Args) ->
+    eaws_app:start_link().
+
+stop(_Client) ->
+    ok.
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
